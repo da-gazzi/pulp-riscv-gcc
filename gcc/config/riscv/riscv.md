@@ -170,6 +170,8 @@
 
   ;; PulpNN v3
   UNSPECV_MLSDOT_INIT_V3
+  UNSPECV_MLSDOT_UPDATE_V3
+  UNSPECV_MLSDOT_ASSIGN_V3
 ])
 
 (define_constants
@@ -8957,11 +8959,22 @@
 
 (define_insn "mlupdatespr_v3"
   [
-    (set (match_operand:SI 0 "register_operand" "+r")
-      (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r")] UNSPECV_MLSDOT_INIT_V3)
+    (set (match_operand:SI 0 "register_operand" "=r")
+      (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r")] UNSPECV_MLSDOT_UPDATE_V3)
     )
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
+)
+
+
+(define_insn "mlassignspr_v3"
+  [
+    (set (match_operand:SI 0 "register_operand" "=r")
+      (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r")] UNSPECV_MLSDOT_ASSIGN_V3)
+    )
+  ]
+"((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
+"mv %0,%1"
 )
 
 
