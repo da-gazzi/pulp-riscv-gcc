@@ -8762,8 +8762,8 @@
   UNSPEC_MLSDOT
 ])
 
-(define_mode_iterator VMODESALLINT   [HV BV CV NV])
-(define_mode_attr allint_vec_size   [(HV "h")  (BV "b") (CV "c")  (NV "n")])
+(define_mode_iterator VMODESALLINT   [HV BV CV NV TV])
+(define_mode_attr allint_vec_size   [(HV "h")  (BV "b") (CV "c")  (NV "n") (TV "t")])
 
 
 (define_insn "mlinitspr"
