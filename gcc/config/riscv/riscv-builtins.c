@@ -124,6 +124,8 @@ static tree opaque_V2HI_type_node;
 static tree opaque_V2HF_type_node;
 static tree opaque_V2OHF_type_node;
 
+static tree integer_ptr_ptr_type_node;
+
 static unsigned int
 riscv_builtin_avail_riscv (void)
 {
@@ -263,7 +265,7 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 
 {
 	int i;
-	rtx Op[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
+	rtx Op[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	const char *Diag=NULL;
 	va_list ap;
 
@@ -554,6 +556,49 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 			}
 			Diag = "__builtin_pulp_insert16(X, Offset) Expects Offset immediate constant in range [0..15]";
 			break;
+    case CODE_FOR_mlinitspr_v3:
+    case CODE_FOR_mlsdotuphv_v3:
+    case CODE_FOR_mlsdotupbv_v3:
+    case CODE_FOR_mlsdotupcv_v3:
+    case CODE_FOR_mlsdotupnv_v3:
+    case CODE_FOR_mlsdotusphv_v3:
+    case CODE_FOR_mlsdotuspbv_v3:
+    case CODE_FOR_mlsdotuspcv_v3:
+    case CODE_FOR_mlsdotuspnv_v3:
+    case CODE_FOR_mlsdotsuphv_v3:
+    case CODE_FOR_mlsdotsupbv_v3:
+    case CODE_FOR_mlsdotsupcv_v3:
+    case CODE_FOR_mlsdotsupnv_v3:
+    case CODE_FOR_mlsdotsphv_v3:
+    case CODE_FOR_mlsdotspbv_v3:
+    case CODE_FOR_mlsdotspcv_v3:
+    case CODE_FOR_mlsdotspnv_v3:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT) &&
+          Op[1] && (GET_CODE(Op[1]) == CONST_INT) &&
+          Op[2] && (GET_CODE(Op[2]) == CONST_INT) &&
+          Op[3] && (GET_CODE(Op[3]) == CONST_INT)) {
+				int v1 = INTVAL (Op[0]);
+        int v2 = INTVAL (Op[1]);
+        int v3 = INTVAL (Op[2]);
+        int v4 = INTVAL (Op[3]);
+				if ( !(v1>=0 && v1<=1) )
+          Diag = "__builtin_pulp_mlsdot...(A, B, C, D, Ptr, Acc) expects A immediate constant in range [0..1]";
+				else if ( !(v2>=0 && v2<=1) )
+          Diag = "__builtin_pulp_mlsdot...(A, B, C, D, Ptr, Acc) expects B immediate constant in range [0..1]";
+				else if ( (v1==1 && v2==1) )
+          Diag = "__builtin_pulp_mlsdot...(A, B, C, D, Ptr, Acc) expects A and B not set to 1 at the same time";
+				else if ( !(v3>=0 && v3<=3) )
+          Diag = "__builtin_pulp_mlsdot...(A, B, C, D, Ptr, Acc) expects C immediate constant in range [0..3]";
+				else if ( !(v4>=0 && v4<=1) )
+          Diag = "__builtin_pulp_mlsdot...(A, B, C, D, Ptr, Acc) expects D immediate constant in range [0..1]";
+        else
+          return 1;
+			}
+
+
+      break;
+
+
 
 		/* Internal error no handler for this builtin code */
 		default:
@@ -586,6 +631,7 @@ static GTY(()) int riscv_builtin_decl_index[NUM_INSN_CODES];
 #define RISCV_ATYPE_POINTER ptr_type_node
 #define RISCV_ATYPE_CPOINTER const_ptr_type_node
 #define RISCV_ATYPE_INTPTR integer_ptr_type_node
+#define RISCV_ATYPE_INTPTRPTR integer_ptr_ptr_type_node
 
 /* Standard mode-based argument types.  */
 #define RISCV_ATYPE_UQI unsigned_intQI_type_node
@@ -704,6 +750,7 @@ riscv_init_builtins (void)
   (*lang_hooks.types.register_builtin_type) (fp8_type, "__fp8");
 */
 
+  integer_ptr_ptr_type_node    = build_pointer_type (integer_ptr_type_node);
   opaque_V4QI_type_node    = build_opaque_vector_type (intQI_type_node, 4);
   opaque_V2HI_type_node    = build_opaque_vector_type (intHI_type_node, 2);
 
@@ -822,10 +869,22 @@ riscv_prepare_builtin_arg (enum insn_code icode,
   tree arg;
   rtx value;
   enum machine_mode mode;
+  const char *insn_constraint;
 
   arg = CALL_EXPR_ARG (exp, argno);
-  value = expand_normal (arg);
+  insn_constraint = insn_data[icode].operand[opno].constraint;
   mode = insn_data[icode].operand[opno].mode;
+
+
+//  if(*insn_constraint == '+') {
+   //   printf("CHEMINCHIAEEEEEE\n");
+      //value = expand_expr_real (arg, NULL_RTX, VOIDmode, EXPAND_WRITE, NULL, false);
+//      gen_move_insn();
+//  }
+//  else
+     value = expand_normal (arg);
+
+  if(side_effects_p(value)) printf("**** EVVIVA!!!\n");
   if (!insn_data[icode].operand[opno].predicate (value, mode))
     {
       /* We need to get the mode from ARG for two reasons:
@@ -848,6 +907,7 @@ riscv_prepare_builtin_arg (enum insn_code icode,
           return const0_rtx;
         }
     }
+
 
   return value;
 }
@@ -997,9 +1057,17 @@ riscv_expand_builtin_direct (const struct riscv_builtin_description *d, int buil
       emit_insn (GEN_FCN (icode) (ops[0], ops[1], ops[2], ops[3], ops[4], ops[5]));
       break;
 
+    case 7:
+      emit_insn (GEN_FCN (icode) (ops[0], ops[1], ops[2], ops[3], ops[4], ops[5], ops[6]));
+      break;
+
     default:
       gcc_unreachable ();
     }
+//  if(icode == CODE_FOR_mlinitspr)
+//	  emit_insn (gen_mlupdatespr(ops[0]));
+//  if(icode >= CODE_FOR_mlsdotuphv && icode <= CODE_FOR_mlsdotspcv)
+//	  emit_insn (gen_mlupdatespr(ops[1]));
   PulpBuiltinGenPostExtract(&ExtraArg, ops[0]);
   return target;
 }
