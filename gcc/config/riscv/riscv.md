@@ -8257,23 +8257,42 @@
 (define_insn "<vec_op2_name><VMODESMALLINT:mode>3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (zero_extend:SI (vec_op2_smallint:VMODESMALLINT (unspec:VMODESMALLINT [(match_operand:SI 1 "register_operand"  "r")] UNSPEC_NN_VECTOR)
-                                               (unspec:VMODESMALLINT [(match_operand:SI 2 "nonmemory_operand" "r")] UNSPEC_NN_VECTOR)
-                        )
-        )
-   )
-  ]
-"((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
-"pv.<vec_op2_asm_name>.<smallint_vec_size> \t%0,%1,%2\t # Vect Op Vect"
-[(set_attr "type" "arith")
- (set_attr "mode" "SI")]
-)
+                                                        (unspec:VMODESMALLINT [(match_operand:SI 2 "nonmemory_operand" "r")] UNSPEC_NN_VECTOR))))]
+                                                        "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
+                                                        "pv.<vec_op2_asm_name>.<smallint_vec_size> \t%0,%1,%2\t # Vect Op Vect"
+                                                        [(set_attr "type" "arith")
+                                                        (set_attr "mode" "SI")])
+
+;;
+;; Ternary min/max get special treatment as there are only signed vector
+;; implementations
+;;
+
+;; compressed ternary 20-way SIMD min
+(define_insn "smintv3"
+    [(set (match_operand:SI 0 "register_operand" "=r")
+          (zero_extend:SI (smin:TV (unspec:TV [(match_operand:SI 1 "register_operand"  "r")] UNSPEC_NN_VECTOR)
+                                   (unspec:TV [(match_operand:SI 2 "register_operand" "r")] UNSPEC_NN_VECTOR))))]
+                                   "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
+                                   "pv.min.t \t%0,%1,%2\t # Vect Op Vect"
+                      [(set_attr "type" "arith")
+                      (set_attr "mode" "SI")])
+
+;; compressed ternary 20-way SIMD max
+(define_insn "smaxtv3"
+    [(set (match_operand:SI 0 "register_operand" "=r")
+          (zero_extend:SI (smax:TV (unspec:TV [(match_operand:SI 1 "register_operand"  "r")] UNSPEC_NN_VECTOR)
+                                   (unspec:TV [(match_operand:SI 2 "register_operand" "r")] UNSPEC_NN_VECTOR))))]
+                                   "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
+                     "pv.max.t \t%0,%1,%2\t # Vect Op Vect"
+                     [(set_attr "type" "arith")
+                     (set_attr "mode" "SI")])
 
 
 (define_insn "<vec_op2_name>sc<VMODESMALLINT:mode>3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (zero_extend:SI (vec_op2_smallint:VMODESMALLINT (unspec:VMODESMALLINT [(match_operand:SI 1 "register_operand"  "r")] UNSPEC_NN_VECTOR)
-                                               (unspec:VMODESMALLINT [(match_operand:SI 2 "nonmemory_operand" "r")] UNSPEC_NN_SCALAR)
-                        )
+                                               (unspec:VMODESMALLINT [(match_operand:SI 2 "nonmemory_operand" "r")] UNSPEC_NN_SCALAR))
         )
    )
   ]
@@ -8836,13 +8855,13 @@
     ])
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
-"pv.mlsdotup.<allint_vec_size_t>.%4 \t%0,%1,%2\t"
+"pv.mlsdotup.<allint_vec_size>.%4 \t%0,%1,%2\t"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
 
 
-(define_insn "mlsdotusp<VMODESALLINT_T:mode>"
+(define_insn "mlsdotusp<VMODESALLINT:mode>"
   [
     (unspec:SI [(post_inc:SI (match_operand:SI 1 "register_operand" "+r"))] UNSPEC_MLSDOT)
     (parallel[
@@ -8864,7 +8883,7 @@
     ])
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
-"pv.mlsdotusp.<allint_vec_size_t>.%4 \t%0,%1,%2\t"
+"pv.mlsdotusp.<allint_vec_size>.%4 \t%0,%1,%2\t"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -8892,7 +8911,7 @@
     ])
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
-"pv.mlsdotsup.<allint_vec_size_t>.%4 \t%0,%1,%2\t"
+"pv.mlsdotsup.<allint_t_vec_size>.%4 \t%0,%1,%2\t"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -8920,7 +8939,7 @@
     ])
   ]
 "((Pulp_Cpu==PULP_NN) && !TARGET_MASK_NOVECT)"
-"pv.mlsdotsp.<allint_vec_size_t>.%4 \t%0,%1,%2\t"
+"pv.mlsdotsp.<allint_t_vec_size>.%4 \t%0,%1,%2\t"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -9020,7 +9039,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.smlsdotup.<allint_vec_size_t> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotup.<allint_t_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -9064,7 +9083,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.smlsdotusp.<allint_vec_size_t> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotusp.<allint_t_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -9108,7 +9127,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.smlsdotsup.<allint_vec_size_t> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotsup.<allint_t_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -9152,7 +9171,7 @@
   Imm |= INTVAL(operands[3]) << 1;
   Imm |= INTVAL(operands[4]);
   xoperands[2] = gen_rtx_CONST_INT(SImode, Imm);
-  output_asm_insn("pv.smlsdotsp.<allint_vec_size_t> \t%0,%1,%2", xoperands);
+  output_asm_insn("pv.smlsdotsp.<allint_t_vec_size> \t%0,%1,%2", xoperands);
   return "";  
 }
 [(set_attr "type" "arith")
@@ -9175,7 +9194,7 @@
                      (match_operand:V2HI 3 "register_operand" "r")]
                      UNSPEC_THRC))]
                      "(Pulp_Cpu == PULP_NN) && !TARGET_MASK_NOVECT"
-                     "p.thrc \t%1,%2,%3"
+                     "pv.thrc \t%1,%2,%3"
                      [(set_attr "type" "arith")
                      (set_attr "mode" "SI")])
 
